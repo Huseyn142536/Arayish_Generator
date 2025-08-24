@@ -1,3 +1,5 @@
+# arayish_generator/settings.py
+
 """
 Django settings for arayish_generator project.
 
@@ -11,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os # Bu sətri əlavə etmək yaxşı təcrübədir
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -117,27 +120,21 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+
+# Media files (istifadəçinin yüklədiyi fayllar üçün)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# ... faylın sonu
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ==============================================================================
+#                 !!! DÜZƏLİŞ EDİLƏN HİSSƏ !!!
+# ==============================================================================
 # Google Gemini API açarı
-GEMINI_API_KEY = curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" \
-  -H 'Content-Type: application/json' \
-  -H 'X-goog-api-key: GEMINI_API_KEY' \
-  -X POST \
-  -d {
-    "contents": [
-      {
-        "parts": [
-          {
-            "text": "Explain how AI works in a few words"
-          }
-        ]
-      }
-    ]
-  }
+# Google AI Studio-dan aldığınız real açarı dırnaqların arasına yerləşdirin.
+GEMINI_API_KEY = 'AIzaSyDJCIlpZIprAkmS_awx1PjybzbpDsOK8Mo'
