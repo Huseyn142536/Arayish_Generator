@@ -8,6 +8,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
 import json
 import google.generativeai as genai
+# Bilik bazamızı import edirik
+from .knowledge_base import XESTELIKLER_ESASNAMESI_METNI, HERBI_XIDMET_QANUNU_METNI
 
 # Google AI konfiqurasiyası
 try:
@@ -22,7 +24,14 @@ def analyze_molet(molet_novu, molet_bitme, elave_melumat):
 
     model = genai.GenerativeModel('gemini-1.5-flash')
     prompt = f"""
-    Azərbaycan Respublikasının "Hərbi vəzifə və hərbi xidmət haqqında" Qanununa əsasən, aşağıdakı vəziyyəti təhlil et və yekun hüquqi rəy ver.
+    Sənə təqdim edilən "Hərbi vəzifə və hərbi xidmət haqqında" Azərbaycan Respublikası Qanununun tam mətninə ciddi şəkildə əsaslanaraq, aşağıdakı vəziyyəti təhlil et və yekun hüquqi rəy ver.
+
+    Analiz üçün istifadə ediləcək tam mənbə mətni (kontekst):
+    ---
+    {HERBI_XIDMET_QANUNU_METNI}
+    ---
+    
+    Analiz ediləcək vəziyyət:
     - Möhlət növü: {molet_novu}
     - Möhlətin bitmə tarixi: {molet_bitme}
     - Əlavə məlumat: {elave_melumat}
@@ -30,109 +39,93 @@ def analyze_molet(molet_novu, molet_bitme, elave_melumat):
     Analizində Qanunun konkret maddələrinə (məsələn, Maddə 21) istinad et. Vətəndaşın möhlət hüququnun olub-olmadığını, qüvvədədirsə nə zaman bitdiyini və hansı şərtlərə tabe olduğunu aydın şəkildə yaz.
     Nəticəni JSON formatında, "analiz_neticesi" açarı ilə qaytar.
     """
-    
-    print("\n--- MÖHLƏT ANALİZİ ÜÇÜN SÜNİ ZƏKAYA GÖNDƏRİLƏN TƏLİMAT ---")
-    print(prompt)
-    print("----------------------------------------------------------")
-
     try:
         response = model.generate_content(prompt)
-        print("\n--- SÜNİ ZƏKADAN GƏLƏN XAM CAVAB (MÖHLƏT) ---")
-        print(response.text)
-        print("-------------------------------------------------")
         cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
         return json.loads(cleaned_response)
     except Exception as e:
-        print(f"\n!!! JSON PARSİNQ XƏTASI (MÖHLƏT): {e} !!!")
-        return {"analiz_neticesi": "Möhlət hüququ analizi zamanı xəta baş verdi (cavab JSON deyil)."}
+        print(f"Möhlət analizi xətası: {e}")
+        return {"analiz_neticesi": "Möhlət hüququ analizi zamanı xəta baş verdi."}
 
 def analyze_diagnoz(diagnoz_text):
     """Mərhələ 3: Tibbi diaqnozu "Hərbi-həkim ekspertizası haqqında Əsasnamə" ilə analiz edir."""
     if not diagnoz_text.strip():
         return {"yararliliq_kateqoriyasi": "Tibbi məlumat daxil edilməyib.", "esaslandirma": ""}
 
-    # Süni zəkaya kömək etmək üçün "Xəstəliklər Cədvəli"ndən müvafiq konteksti təqdim edirik.
-    # Bu siyahını ehtiyacınıza uyğun olaraq genişləndirə bilərsiniz.
-    xestelikler_cedveli_konteksti = """
-    "Xəstəliklər Cədvəli"ndən bəzi maddələr:
-    - Maddə 68. Əlin və barmaqların olmaması, deformasiyaları, qüsurları:
-      a) funksiyaların mühüm dərəcədə pozulması ilə (bir əlin üç və daha çox barmağının olmaması; birinci və ikinci barmaqların olmaması; bir əlin barmaqlarının kəskin deformasiyası və s.) - Yararlılıq dərəcəsi: "D" (Hərbi xidmətə yararsız)
-      b) funksiyaların orta dərəcədə pozulması ilə (bir əlin iki barmağının olmaması; birinci barmağın olmaması və s.) - Yararlılıq dərəcəsi: "C" (Hərbi xidmətə məhdud yararlı)
-      c) funksiyaların cüzi dərəcədə pozulması ilə (bir barmağın olmaması, barmaqların hərəkət məhdudiyyəti və s.) - Yararlılıq dərəcəsi: "B" (Hərbi xidmətə yararlı (sıradankənar))
-    - Maddə 80. Yastıpəncəlik və ayaqların digər deformasiyaları:
-      a) funksiyaların mühüm dərəcədə pozulması ilə - Yararlılıq dərəcəsi: "D"
-      b) funksiyaların orta dərəcədə pozulması ilə - Yararlılıq dərəcəsi: "C"
-    """
-
     model = genai.GenerativeModel('gemini-1.5-flash')
     prompt = f"""
-    Sənə təqdim edilən "Xəstəliklər Cədvəli" kontekstinə və "Hərbi-həkim ekspertizası haqqında Əsasnamə"yə əsasən, aşağıdakı tibbi diaqnozu analiz et.
+    Sənə təqdim edilən "Hərbi-həkim ekspertizası haqqında Əsasnamə" və onun "Xəstəliklər Cədvəli"nin tam mətninə ciddi şəkildə əsaslanaraq, aşağıdakı tibbi diaqnozu analiz et.
     
-    Kontekst (istinad etməli olduğun mənbə):
+    Analiz üçün istifadə ediləcək tam mənbə mətni (kontekst):
     ---
-    {xestelikler_cedveli_konteksti}
+    {XESTELIKLER_ESASNAMESI_METNI}
     ---
 
     Analiz ediləcək diaqnoz: "{diagnoz_text}"
     
-    Bu kontekstə əsaslanaraq, diaqnoza uyğun yararlılıq dərəcəsini ("A", "B", "C", "D", "E") və Əsasnamənin hansı maddəsinə əsaslandığını müəyyən et.
+    Yuxarıda verilmiş tam mətnə əsaslanaraq, bu diaqnoza uyğun yararlılıq dərəcəsini ("A", "B", "C", "D", "E") və Əsasnamənin hansı maddəsinin hansı bəndinə əsaslandığını dəqiq şəkildə müəyyən et. Cavabında yalnız istinad etdiyin maddəni qeyd et.
     Nəticəni JSON formatında, "yararliliq_kateqoriyasi" və "esaslandirma" açarları ilə qaytar.
     Məsələn: {{"yararliliq_kateqoriyasi": "D - Hərbi xidmətə yararsız", "esaslandirma": "Xəstəliklər cədvəlinin 68-ci maddəsinin 'a' bəndinə əsasən."}}
     """
-    
-    # Diaqnostika üçün təlimatı çap edirik
-    print("\n--- DÜZƏLİŞ EDİLMİŞ DİAQNOZ TƏLİMATI ---")
-    print(prompt)
-    print("----------------------------------------------------------")
-
     try:
         response = model.generate_content(prompt)
-        print("\n--- SÜNİ ZƏKADAN GƏLƏN XAM CAVAB (DİAQNOZ) ---")
-        print(response.text)
-        print("-------------------------------------------------")
         cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
         return json.loads(cleaned_response)
     except Exception as e:
-        print(f"\n!!! JSON PARSİNQ XƏTASI (DİAQNOZ): {e} !!!")
-        return {"yararliliq_kateqoriyasi": "Diaqnoz analizi zamanı xəta baş verdi (cavab JSON deyil).", "esaslandirma": ""}
+        print(f"Diaqnoz analizi xətası: {e}")
+        return {"yararliliq_kateqoriyasi": "Diaqnoz analizi zamanı xəta baş verdi.", "esaslandirma": ""}
+
 def upload_and_generate(request):
     if request.method == 'POST':
-        # Mərhələlərdən məlumatları alırıq
+        # Mərhələ 1-dən məlumatları alırıq
         shacsi_melumat = {
-            'soyad': request.POST.get('soyad', ''),'ad': request.POST.get('ad', ''),
-            'ata_adi': request.POST.get('ata_adi', ''),'tevellud': request.POST.get('tevellud', ''),
+            'soyad': request.POST.get('soyad', ''),
+            'ad': request.POST.get('ad', ''),
+            'ata_adi': request.POST.get('ata_adi', ''),
+            'tevellud': request.POST.get('tevellud', ''),
             'qeydiyyat_idare': request.POST.get('qeydiyyat_idare', '')
         }
+        
+        # Mərhələ 2-dən məlumatları alırıq və analiz edirik
         molet_info = {
-            'novu': request.POST.get('molet_novu'),'bitme_muddeti': request.POST.get('molet_bitme_muddeti'),
+            'novu': request.POST.get('molet_novu'),
+            'bitme_muddeti': request.POST.get('molet_bitme_muddeti'),
             'elave_melumat': request.POST.get('molet_elave_melumat')
         }
-        diaqnoz_text = request.POST.get('diaqnoz', '')
-
-        # Analiz funksiyalarını çağırırıq
         molet_analizi = analyze_molet(molet_info['novu'], molet_info['bitme_muddeti'], molet_info['elave_melumat'])
+        
+        # Mərhələ 3-dən məlumatları alırıq və analiz edirik
+        diaqnoz_text = request.POST.get('diaqnoz', '')
         tibbi_analiz = analyze_diagnoz(diaqnoz_text)
 
-        # Arayış faylını yaradırıq (bu hissə dəyişməz qalıb)
+        # Arayış faylını yaradırıq
         doc = Document()
         vetendash_adi = f"{shacsi_melumat['soyad']} {shacsi_melumat['ad']} {shacsi_melumat['ata_adi']}".strip()
         doc.add_heading(f'Vətəndaş {vetendash_adi} haqqında Kompleks Arayış', level=1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Mərhələ 1-in nəticələri
         doc.add_heading('1. Şəxsi Məlumatlar', level=2)
         doc.add_paragraph(f"Ad, Soyad, Ata adı: {vetendash_adi}")
         doc.add_paragraph(f"Təvəllüd: {shacsi_melumat['tevellud']}")
         doc.add_paragraph(f"Hərbi qeydiyyatda olduğu idarə: {shacsi_melumat['qeydiyyat_idare']}")
+
+        # Mərhələ 2-nin nəticələri
         doc.add_heading('2. Möhlət Hüququnun Analizi', level=2)
         doc.add_paragraph(f"Qanunvericiliyə əsasən süni zəkanın hüquqi rəyi:", style='Intense Quote')
         doc.add_paragraph(molet_analizi.get('analiz_neticesi', 'Məlumat yoxdur.'))
+
+        # Mərhələ 3-ün nəticələri
         doc.add_heading('3. Hərbi-Tibbi Ekspertiza Rəyi', level=2)
         doc.add_paragraph(f"Təqdim edilən diaqnoz: {diaqnoz_text if diaqnoz_text.strip() else 'Daxil edilməyib'}")
         doc.add_paragraph(f"Süni zəkanın təyin etdiyi yararlılıq dərəcəsi:", style='Intense Quote')
         doc.add_paragraph(f"Kateqoriya: {tibbi_analiz.get('yararliliq_kateqoriyasi', 'Təyin edilmədi.')}")
         doc.add_paragraph(f"Əsaslandırma: {tibbi_analiz.get('esaslandirma', 'Məlumat yoxdur.')}")
 
+        # Sənədi istifadəçiyə göndəririk
         file_stream = io.BytesIO()
         doc.save(file_stream)
         file_stream.seek(0)
+        
         filename = f"Arayish_{shacsi_melumat['soyad']}_{shacsi_melumat['ad']}.docx"
         response = HttpResponse(file_stream, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
