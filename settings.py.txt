@@ -137,4 +137,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ==============================================================================
 # Google Gemini API açarı
 # Google AI Studio-dan aldığınız real açarı dırnaqların arasına yerləşdirin.
-GEMINI_API_KEY = 'AIzaSyDJCIlpZIprAkmS_awx1PjybzbpDsOK8Mo'
+GEMINI_API_KEY = 'X'
+
