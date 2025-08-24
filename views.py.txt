@@ -8,20 +8,16 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
 import json
 import google.generativeai as genai
+import pdfplumber  # Yeni əlavə etdiyimiz kitabxana
 
-# Google AI-nı konfiqurasiya edirik
+# Google AI konfiqurasiyası (əvvəlki kimi qalır)
 try:
     genai.configure(api_key=settings.GEMINI_API_KEY)
 except AttributeError:
-    # API açarı tapılmasa, xəta verməməsi üçün tədbir
     print("XƏBƏRDARLIQ: settings.py faylında GEMINI_API_KEY təyin edilməyib.")
 
 def analyze_text_with_gemini(text):
-    """
-    Verilən mətni analiz etmək və strukturlaşdırılmış data çıxarmaq üçün
-    Gemini modelinə sorğu göndərir.
-    """
-    # Süni zəka üçün təlimat (prompt) hazırlayırıq
+    # Bu funksiya dəyişmədən qalır, çünki o, sadəcə mətn analiz edir
     prompt = f"""
     Aşağıdakı mətni analiz et və məlumatları dəqiq şəkildə JSON formatında çıxar. 
     JSON açarları bunlar olmalıdır: "ad", "soyad", "ata_adi", "muraciet_qurum", "hadise_mezmunu", "mueyyen_edildi", "teklif".
@@ -34,12 +30,9 @@ def analyze_text_with_gemini(text):
 
     Nəticəni yalnız JSON formatında, heç bir əlavə şərh və ya işarə olmadan qaytar.
     """
-    
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
-        
-        # Cavabı təmizləyib JSON-a çeviririk
         cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
         return json.loads(cleaned_response)
     except Exception as e:
@@ -48,25 +41,44 @@ def analyze_text_with_gemini(text):
 
 def upload_and_generate(request):
     if request.method == 'POST':
-        user_input = request.POST.get('user_input', '')
+        # Yüklənən bütün PDF fayllarını siyahı şəklində alırıq
+        pdf_files = request.FILES.getlist('pdf_files')
+
+        if not pdf_files:
+            return render(request, 'upload.html', {'error': 'Zəhmət olmasa, PDF faylları seçin.'})
+
+        combined_text = ""
+        # Hər bir PDF faylını oxuyub mətnini birləşdiririk
+        for pdf_file in pdf_files:
+            try:
+                with pdfplumber.open(pdf_file) as pdf:
+                    for page in pdf.pages:
+                        # Səhifədən mətni çıxarıb ümumi mətnə əlavə edirik
+                        text = page.extract_text()
+                        if text:
+                            combined_text += text + "\n\n"
+            except Exception as e:
+                print(f"Fayl oxunarkən xəta baş verdi ({pdf_file.name}): {e}")
+                return render(request, 'upload.html', {'error': f'{pdf_file.name} faylını oxumaq mümkün olmadı.'})
         
-        # Mətni analiz üçün Gemini-yə göndəririk
-        data = analyze_text_with_gemini(user_input)
+        if not combined_text.strip():
+            return render(request, 'upload.html', {'error': 'Yüklənən PDF fayllarından heç bir mətn çıxarmaq mümkün olmadı. Faylların içi şəkil olmasın.'})
+
+        # Birləşdirilmiş mətni analiz üçün Gemini-yə göndəririk
+        data = analyze_text_with_gemini(combined_text)
         
         if not data:
-            # Əgər analiz baş tutmasa, istifadəçiyə xəta mesajı göstəririk
             error_message = "Mətni analiz etmək mümkün olmadı. API açarınızı və internet bağlantınızı yoxlayın."
             return render(request, 'upload.html', {'error': error_message})
 
-        # Analizdən gələn məlumatları dəyişənlərə mənimsədirik
+        # Analizdən gələn məlumatlarla Word sənədi yaradırıq
         ad = data.get('ad', '')
         soyad = data.get('soyad', '')
         ata_adi = data.get('ata_adi', '')
         vetendash_adi = f"{soyad} {ad} {ata_adi}".strip()
         
-        # Word sənədini yaradırıq (Bu hissə əvvəlki kodla eynidir)
         doc = Document()
-        # ... (Word sənədini doldurma məntiqi. Məlumatlar `data` lüğətindən götürülür)
+        # Word sənədini doldurma məntiqi (əvvəlki kimi qalır)
         p_title = doc.add_paragraph()
         p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         runner_title = p_title.add_run(f'Vətəndaş {vetendash_adi} müraciəti əsasında aparılmış xidməti təhqiqatın nəticəsinə dair')
@@ -97,7 +109,7 @@ def upload_and_generate(request):
         doc.save(file_stream)
         file_stream.seek(0)
         
-        filename = f"Arayish_{soyad}_{ad}.docx" if soyad and ad else "Arayish.docx"
+        filename = f"Arayish_{soyad}_{ad}.docx" if soyad and ad else "Umumi_Arayish.docx"
         response = HttpResponse(file_stream, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
