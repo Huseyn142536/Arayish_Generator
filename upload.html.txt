@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ağıllı Arayış Generatoru</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 5px; }
+        textarea { width: 95%; min-height: 150px; font-size: 14px; padding: 10px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Arayış üçün Məlumatları Daxil Edin</h2>
+        <p><i>Nümunə: <br>Ad: Rüstəm Həsənov <br>Hadisə: Sərhədkeçmə məhdudiyyəti</i></p>
+
+        <form method="post">
+            {% csrf_token %}
+            <textarea name="user_input" placeholder="Məlumatları bura daxil edin..."></textarea><br><br>
+            <button type="submit">Arayış Hazırla</button>
+        </form>
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

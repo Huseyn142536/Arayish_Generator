@@ -1,0 +1,21 @@
+# arayish_generator/urls.py
+
+from django.contrib import admin
+from django.urls import path
+from core.views import upload_and_generate
+from django.conf import settings
+from django.conf.urls.static import static
+import os # <--- BU SƏTRİ ƏLAVƏ EDİN
+
+# Bu iki sətri settings.py faylına köçürmək daha doğrudur
+# MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(settings.BASE_DIR, 'media')
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', upload_and_generate, name='upload'),
+]
+
+# Media faylları üçün URL-lərin düzgün işləməsi
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

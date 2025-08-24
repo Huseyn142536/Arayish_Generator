@@ -1,0 +1,59 @@
+# core/views.py
+from django.shortcuts import render
+from django.http import HttpResponse
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+import io
+import re # Regular Expressions kitabxanasını daxil edirik
+
+def extract_data(text, keyword):
+    # Mətndən açar sözə görə məlumat çıxaran sadə funksiya
+    match = re.search(f"{keyword}:(.*?)\n", text, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return f"[{keyword} məlumatı tapılmadı]"
+
+def upload_and_generate(request): # Funksiyanın adını dəyişməyə ehtiyac yoxdur
+    if request.method == 'POST':
+        user_input = request.POST.get('user_input', '')
+
+        # Mətndən məlumatları çıxarırıq
+        vetendash_adi = extract_data(user_input, "Ad")
+        hadise_mezmunu = extract_data(user_input, "Hadisə")
+        teklif_1 = extract_data(user_input, "Təklif")
+
+        # Yeni sənəd yaradırıq
+        doc = Document()
+
+        # --- Şablonun doldurulması ---
+        p_title = doc.add_paragraph()
+        p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        runner_title = p_title.add_run(f'Vətəndaş {vetendash_adi} müraciəti əsasında aparılmış xidməti təhqiqatın nəticəsinə dair')
+        runner_title.bold = True
+
+        # ... (arayışın qalan hissələri eyni qaydada doldurulur) ...
+
+        doc.add_paragraph()
+        p_arayish = doc.add_paragraph()
+        p_arayish.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_arayish.add_run('A R A Y I Ş').bold = True
+
+        doc.add_paragraph()
+        doc.add_paragraph(f"{hadise_mezmunu} barədə vətəndaş {vetendash_adi} tərəfindən daxil olmuş müraciət əsasında...")
+
+        # ...və s. bütün şablon bu məntiqlə doldurulur.
+        # Təklif hissəsi:
+        doc.add_paragraph('T ə k l İ f   e d İ r İ k:').alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.add_paragraph(f'1. {teklif_1}', style='List Number')
+
+        # --- Sənədin göndərilməsi ---
+        file_stream = io.BytesIO()
+        doc.save(file_stream)
+        file_stream.seek(0)
+        response = HttpResponse(file_stream, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = f'attachment; filename=Arayish_{vetendash_adi}.docx'
+        return response
+
+    # GET request üçün boş formanı göstəririk
+    return render(request, 'upload.html')
