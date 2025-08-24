@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Analizatoru ilə Arayış Generatoru</title>
+    <title>Mərhələli Analiz Sistemi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #1a73e8;
+            --primary-color: #0056b3;
             --background-color: #f0f2f5;
             --form-background: #ffffff;
             --text-color: #333;
             --border-color: #d1d5db;
-            --border-radius: 8px;
+            --border-radius: 12px;
+            --section-header-bg: #e9ecef;
         }
         body {
             font-family: 'Poppins', sans-serif;
@@ -24,109 +25,136 @@
             padding: 2rem;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            align-items: flex-start;
         }
         .container {
             width: 100%;
-            max-width: 700px;
+            max-width: 800px;
             background: var(--form-background);
-            padding: 2.5rem;
             border-radius: var(--border-radius);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            text-align: center;
+            overflow: hidden;
         }
-        h2 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-        p {
-            color: #666;
-            margin-bottom: 2rem;
-        }
-        .upload-area {
-            border: 2px dashed var(--primary-color);
-            border-radius: var(--border-radius);
+        form {
             padding: 2.5rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
         }
-        .upload-area:hover {
-            background-color: #f0f8ff;
+        .stage {
+            margin-bottom: 2.5rem;
         }
-        .upload-area input[type="file"] {
-            display: none;
+        .stage-header {
+            background-color: var(--section-header-bg);
+            padding: 1rem 2.5rem;
+            margin: -2.5rem -2.5rem 2rem -2.5rem;
+            border-bottom: 1px solid var(--border-color);
         }
-        .upload-area label {
-            font-weight: 500;
+        .stage-header h3 {
+            margin: 0;
             color: var(--primary-color);
+            font-size: 1.25rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        input[type="text"], input[type="date"], select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.2);
         }
         button {
             width: 100%;
-            background-color: var(--primary-color);
+            background: linear-gradient(90deg, #0056b3, #007bff);
             color: white;
-            padding: 0.85rem;
+            padding: 0.9rem;
             border: none;
-            border-radius: var(--border-radius);
+            border-radius: 8px;
             cursor: pointer;
             font-size: 1.1rem;
-            font-weight: 500;
-            margin-top: 2rem;
-            transition: background-color 0.3s, transform 0.2s;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            transition: all 0.3s;
         }
         button:hover {
-            background-color: #1765cc;
-            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+            transform: translateY(-3px);
         }
         .error {
-            color: #d93025;
-            margin-top: 1rem;
-            font-weight: 500;
-        }
-        #file-list {
-            margin-top: 1.5rem;
-            text-align: left;
-            font-size: 0.9rem;
+            color: #d93025; text-align: center; margin-top: 1rem; font-weight: 500;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>PDF Faylları Analiz Et</h2>
-        <p>Arayış tərtib etmək üçün bir və ya bir neçə PDF sənədi seçin.</p>
-        
-        <form method="post" enctype="multipart/form-data">
+        <form method="post">
             {% csrf_token %}
-            <div class="upload-area" onclick="document.getElementById('pdf_files').click();">
-                <input type="file" name="pdf_files" id="pdf_files" multiple accept=".pdf" onchange="updateFileList()">
-                <label for="pdf_files">Faylları seçmək üçün bura klikləyin</label>
-            </div>
-            <div id="file-list"></div>
-            <button type="submit">Analiz Et və Arayış Yarat</button>
-        </form>
-        
-        {% if error %}
-            <p class="error">{{ error }}</p>
-        {% endif %}
-    </div>
 
-    <script>
-        // Seçilən faylların adlarını göstərmək üçün kiçik bir JavaScript kodu
-        function updateFileList() {
-            const input = document.getElementById('pdf_files');
-            const fileList = document.getElementById('file-list');
-            fileList.innerHTML = ''; // Köhnə siyahını təmizlə
-            if (input.files.length > 0) {
-                const list = document.createElement('ul');
-                for (const file of input.files) {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = file.name;
-                    list.appendChild(listItem);
-                }
-                fileList.appendChild(list);
-            }
-        }
-    </script>
+            <div class="stage">
+                <div class="stage-header"><h3>Mərhələ 1: Şəxsi Məlumatlar</h3></div>
+                <div class="form-grid">
+                    <div class="form-group"><label for="soyad">Soyad:</label><input type="text" id="soyad" name="soyad" required></div>
+                    <div class="form-group"><label for="ad">Ad:</label><input type="text" id="ad" name="ad" required></div>
+                    <div class="form-group"><label for="ata_adi">Ata adı:</label><input type="text" id="ata_adi" name="ata_adi" required></div>
+                    <div class="form-group"><label for="tevellud">Təvəllüd:</label><input type="date" id="tevellud" name="tevellud" required></div>
+                    <div class="form-group" style="grid-column: 1 / -1;"><label for="qeydiyyat_idare">Qeydiyyatda olduğu idarə:</label><input type="text" id="qeydiyyat_idare" name="qeydiyyat_idare" required></div>
+                </div>
+            </div>
+
+            <div class="stage">
+                <div class="stage-header"><h3>Mərhələ 2: Möhlət Hüququ Analizi</h3></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="molet_novu">Möhlət növü:</label>
+                        <select id="molet_novu" name="molet_novu">
+                            <option value="yoxdur">Yoxdur</option>
+                            <option value="tehsil">Təhsil</option>
+                            <option value="saglamliq">Ailə vəziyyəti / Sağlamlıq</option>
+                            <option value="diger">Digər</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="molet_bitme_muddeti">Möhlətin bitmə tarixi:</label>
+                        <input type="date" id="molet_bitme_muddeti" name="molet_bitme_muddeti">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="molet_elave_melumat">Əlavə məlumat (təhsil müəssisəsi, ailə vəziyyəti və s.):</label>
+                        <textarea id="molet_elave_melumat" name="molet_elave_melumat" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage">
+                <div class="stage-header"><h3>Mərhələ 3: Hərbi-Tibbi Ekspertiza Analizi</h3></div>
+                <div class="form-group">
+                    <label for="diaqnoz">Tibbi Diaqnoz:</label>
+                    <textarea id="diaqnoz" name="diaqnoz" placeholder="Həkim tərəfindən qoyulmuş dəqiq diaqnozu bura yazın..." rows="4"></textarea>
+                </div>
+            </div>
+
+            <button type="submit">Analiz Et və Arayış Yarat</button>
+            {% if error %}
+                <p class="error">{{ error }}</p>
+            {% endif %}
+        </form>
+    </div>
 </body>
 </html>
